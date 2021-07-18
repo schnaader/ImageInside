@@ -29,7 +29,7 @@ target_include_directories( IMGUI
                             PUBLIC ${IMGUI_DIR}
                             )
 
-add_executable(ImageInside ImageInside.cpp)
+add_executable(ImageInside ImageInside.cpp Correlation.cpp)
 
 target_compile_features(ImageInside PUBLIC cxx_std_11)
 
