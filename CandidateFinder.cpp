@@ -1,34 +1,33 @@
 #include "CandidateFinder.h"
 
-void analyzeTask(float& analysisProgress, std::mutex& analysisProgressMutex,
-                 FinderState& finderState, std::mutex& finderStateMutex) {
+void analyzeTask(CandidateFinder& candidateFinder) {
   // TODO
   // only a dummy at the moment
 
   for (int i = 0; i < 500; i++) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     {
-      std::lock_guard<std::mutex> guard(analysisProgressMutex);
-      analysisProgress = i / 500.0f;
+      std::lock_guard<std::mutex> guard(candidateFinder.analysisProgressMutex);
+      candidateFinder.analysisProgress = i / 500.0f;
     }
 
     {
-      std::lock_guard<std::mutex> guard(finderStateMutex);
-      if (finderState == FinderState::cancellationRequested) {
-        finderState = FinderState::cancelled;
+      std::lock_guard<std::mutex> guard(candidateFinder.finderStateMutex);
+      if (candidateFinder.finderState == FinderState::cancellationRequested) {
+        candidateFinder.finderState = FinderState::cancelled;
         return;
       }
     }    
   }
 
   {
-    std::lock_guard<std::mutex> guard(analysisProgressMutex);
-    analysisProgress = 1.0f;
+    std::lock_guard<std::mutex> guard(candidateFinder.analysisProgressMutex);
+    candidateFinder.analysisProgress = 1.0f;
   }
 
   {
-    std::lock_guard<std::mutex> guard(finderStateMutex);
-    finderState = FinderState::ready;
+    std::lock_guard<std::mutex> guard(candidateFinder.finderStateMutex);
+    candidateFinder.finderState = FinderState::ready;
   }
 }
 
@@ -41,9 +40,7 @@ CandidateFinder::CandidateFinder(CandidateSettings settings, unsigned char* data
   analysisProgress = 0.0f;
 
   // start analyze task in background
-  std::thread analyzeThread(analyzeTask,
-                            std::ref(analysisProgress), std::ref(analysisProgressMutex),
-                            std::ref(finderState), std::ref(finderStateMutex));
+  std::thread analyzeThread(analyzeTask, std::ref(*this));
   analyzeThread.detach();
 }
 
