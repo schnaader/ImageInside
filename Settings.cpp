@@ -1,5 +1,6 @@
 #include "Settings.h"
 #include "imgui.h"
+#include "ImFileDialog/ImFileDialog.h"
 #include <algorithm>
 
 Settings& Settings::getInstance() {
@@ -36,6 +37,17 @@ void Settings::showSettingsWindow() {
   ImGui::Text("Absolute correlation hysteresis");
   ImGui::SliderFloat("min##3", &hysteresisMin, 0.0f, 1.0f);
   ImGui::SliderFloat("max##3", &hysteresisMax, 0.0f, 1.0f);
+
+  if (ImGui::Button("Open file..."))
+    ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
+
+  if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
+    if (ifd::FileDialog::Instance().HasResult()) {
+      std::string res = ifd::FileDialog::Instance().GetResult().u8string();
+      // TODO: analyze opened file
+    }
+    ifd::FileDialog::Instance().Close();
+  }
 
   ImGui::End();
 

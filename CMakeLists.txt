@@ -31,9 +31,10 @@ target_include_directories( IMGUI
 
 add_executable(ImageInside ImageInside.cpp Correlation.cpp)
 
-target_compile_features(ImageInside PUBLIC cxx_std_11)
+target_compile_features(ImageInside PUBLIC cxx_std_17)
 
-target_sources(ImageInside PRIVATE ImageInside.cpp Settings.cpp Settings.h Correlation.cpp Correlation.h)
+target_sources(ImageInside PRIVATE ImageInside.cpp Settings.cpp Settings.h Correlation.cpp Correlation.h ImFileDialog/ImFileDialog.cpp ImFileDialog/ImFileDialog.h)
+								   
 target_include_directories(ImageInside PUBLIC .)
 
 target_link_libraries (ImageInside PUBLIC IMGUI)

@@ -7,6 +7,7 @@
 static Settings& settings = Settings::getInstance();
 
 #include "imgui.h"
+#include "ImFileDialog/ImFileDialog.h"
 #include "backends/imgui_impl_win32.h"
 #include "backends/imgui_impl_dx12.h"
 #include <d3d12.h>
