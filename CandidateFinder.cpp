@@ -6,7 +6,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
   uint64_t progress_max = 0;
   auto settings = candidateFinder.candidateSettings;
 
-  for (int width = settings.widthMin; width < settings.widthMax; width++) {
+  for (int width = settings.widthMin; width <= settings.widthMax; width++) {
     uint64_t bytes_to_process = candidateFinder.dataLength;
     if (settings.limitHeight) {
       bytes_to_process = std::min(bytes_to_process, (uint64_t)width * settings.heightMax);
@@ -17,7 +17,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
   // calculate correlation coefficients for each width
   uint64_t progress = 0;
   unsigned char* dataptr;
-  for (uint64_t width = settings.widthMin; width < settings.widthMax; width++) {
+  for (uint64_t width = settings.widthMin; width <= settings.widthMax; width++) {
     auto correlationCoefficientsForWidth = std::vector<float>();
 
     uint64_t offset1 = 0;
@@ -27,14 +27,44 @@ void analyzeTask(CandidateFinder& candidateFinder) {
       maxHeight = settings.heightMax;
     }
 
+    Candidate candidate;
+    bool processingCandidate = false;
+    float correlationCoefficientSum;
+
     while ((offset1 + 2 * width < candidateFinder.dataLength) && (height < maxHeight)) {
       dataptr = candidateFinder.dataToAnalyze + offset1;
       float correlationCoefficient = std::abs(CorrelationCoefficient(dataptr, dataptr + width, width));
       correlationCoefficientsForWidth.push_back(correlationCoefficient);
+
+      if (!processingCandidate) {
+        if (correlationCoefficient > settings.hysteresisMax) {
+          processingCandidate = true;
+          candidate.width = width;
+          candidate.startLine = height;
+          correlationCoefficientSum = correlationCoefficient;
+        }
+      }
+      else {
+        correlationCoefficientSum += correlationCoefficient;
+
+        if (correlationCoefficient < settings.hysteresisMin) {
+          processingCandidate = false;
+          candidate.endLine = height;
+          candidate.height = candidate.endLine - candidate.startLine;
+          candidate.pixelCount = candidate.width * candidate.height;
+          candidate.meanCorrelationCoefficient = correlationCoefficientSum / candidate.height;
+          candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
+
+          if ((!settings.limitHeight) || ((candidate.height < settings.heightMax) && (candidate.height > settings.heightMin))) {
+            candidateFinder.candidates.push_back(candidate);
+          }
+        }
+      }
+
       offset1 += width;
+      progress += width;
       height++;
 
-      progress += width;
       {
         std::lock_guard<std::mutex> guard(candidateFinder.analysisProgressMutex);
         candidateFinder.analysisProgress = progress / (float)progress_max;
@@ -49,8 +79,28 @@ void analyzeTask(CandidateFinder& candidateFinder) {
       }
     }
 
+    // if a candidate is still in processing, add it now
+    if (processingCandidate) {
+      processingCandidate = false;
+      candidate.endLine = height;
+      candidate.height = candidate.endLine - candidate.startLine;
+      candidate.pixelCount = candidate.width * candidate.height;
+      candidate.meanCorrelationCoefficient = correlationCoefficientSum / candidate.height;
+      candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
+
+      if ((!settings.limitHeight) || ((candidate.height < settings.heightMax) && (candidate.height > settings.heightMin))) {
+        candidateFinder.candidates.push_back(candidate);
+      }
+    }
+
     candidateFinder.correlationCoefficientsForLines.push_back(correlationCoefficientsForWidth);
   }
+
+  // sort candidates descending by score
+  struct {
+    bool operator()(Candidate a, Candidate b) const { return a.score > b.score; }
+  } customSort;
+  std::sort(candidateFinder.candidates.begin(), candidateFinder.candidates.end(), customSort);
 
   std::lock_guard<std::mutex> progressGuard(candidateFinder.analysisProgressMutex);
   candidateFinder.analysisProgress = 1.0f;

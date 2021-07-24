@@ -1,10 +1,12 @@
 #pragma once
+#include <Candidate.h>
 #include "CandidateSettings.h"
 #include <cstdint>
 #include <chrono>
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <algorithm>
 
 enum class FinderState { analyzing, ready, cancellationRequested, cancelled };
 
@@ -23,4 +25,5 @@ class CandidateFinder {
     uint64_t dataLength;
 
     std::vector<std::vector<float>> correlationCoefficientsForLines;
+    std::vector<Candidate> candidates;
 };

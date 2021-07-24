@@ -34,7 +34,7 @@ add_executable(ImageInside ImageInside.cpp Correlation.cpp)
 target_compile_features(ImageInside PUBLIC cxx_std_17)
 
 target_sources(ImageInside PRIVATE ImageInside.cpp Settings.cpp Settings.h Correlation.cpp Correlation.h CandidateFinder.cpp CandidateFinder.h CandidateSettings.h
-                                   ImFileDialog/ImFileDialog.cpp ImFileDialog/ImFileDialog.h stb_image/stb_image.h)
+                                   Candidate.h ImFileDialog/ImFileDialog.cpp ImFileDialog/ImFileDialog.h stb_image/stb_image.h)
 								   
 target_include_directories(ImageInside PUBLIC .)
 
