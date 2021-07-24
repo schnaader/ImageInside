@@ -18,7 +18,7 @@ class Settings
     enum class Bitdepth { bpp8, bpp16, bpp24, bpp32 };
     Bitdepth bitDepth;
 
-    float hysteresisMin, hysteresisMax;
+    float hysteresisMin = 0.5, hysteresisMax = 0.9;
 
     void showSettingsWindow();
 };
