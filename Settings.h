@@ -15,5 +15,5 @@ class Settings
   public:
     CandidateSettings globalSettings;
 
-    void showSettingsWindow();
+    CandidateFinder* showSettingsWindow(CandidateFinder* globalCandidateFinder);
 };

@@ -3,8 +3,10 @@
 //
 // based on this ImGui Win32 DirectX12 example: https://github.com/ocornut/imgui/tree/master/examples/example_win32_directx12
 
+#include "CandidateFinder.h"
 #include "Settings.h"
 static Settings& settings = Settings::getInstance();
+static CandidateFinder* candidateFinder = nullptr;
 
 #include "imgui.h"
 #include "ImFileDialog/ImFileDialog.h"
@@ -144,8 +146,18 @@ int main(int, char**)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        {
-          settings.showSettingsWindow();
+        candidateFinder = settings.showSettingsWindow(candidateFinder);
+
+        if (candidateFinder != nullptr) {
+          if (candidateFinder->finderState == FinderState::analyzing) {
+            ImGui::Begin("Progress", 0, ImGuiWindowFlags_NoResize);
+            ImGui::SetWindowSize(ImVec2(800, 75));
+            ImGui::ProgressBar(candidateFinder->analysisProgress);
+            ImGui::End();
+          }
+          else if (candidateFinder->finderState == FinderState::ready) {
+            // TODO: show candidate finder results
+          }
         }
 
         // Rendering

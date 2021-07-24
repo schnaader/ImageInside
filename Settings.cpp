@@ -1,3 +1,4 @@
+#include "CandidateFinder.h"
 #include "Settings.h"
 #include "imgui.h"
 #include "ImFileDialog/ImFileDialog.h"
@@ -8,7 +9,8 @@ Settings& Settings::getInstance() {
   return instance;
 }
 
-void Settings::showSettingsWindow() {
+CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFinder) {
+  CandidateFinder* candidateFinder = globalCandidateFinder;
 
   float oldHysteresisMin = globalSettings.hysteresisMin;
   float oldHysteresisMax = globalSettings.hysteresisMax;
@@ -38,15 +40,28 @@ void Settings::showSettingsWindow() {
   ImGui::SliderFloat("min##3", &globalSettings.hysteresisMin, 0.0f, 1.0f);
   ImGui::SliderFloat("max##3", &globalSettings.hysteresisMax, 0.0f, 1.0f);
 
-  if (ImGui::Button("Open file..."))
-    ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
+  // a file can be opened to start analysis when no analysis is running at the moment
+  if ((candidateFinder == nullptr) || (candidateFinder->finderState == FinderState::ready)) {
+    if (ImGui::Button("Open file..."))
+      ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
 
-  if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
-    if (ifd::FileDialog::Instance().HasResult()) {
-      std::string res = ifd::FileDialog::Instance().GetResult().u8string();
-      // TODO: analyze opened file
+    if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
+      if (ifd::FileDialog::Instance().HasResult()) {
+        std::string res = ifd::FileDialog::Instance().GetResult().u8string();
+
+        if (candidateFinder != nullptr) {
+          if (candidateFinder->finderState == FinderState::ready) {
+            delete candidateFinder;
+            candidateFinder = nullptr;
+          }
+        }
+
+        if (candidateFinder == nullptr) {
+          candidateFinder = new CandidateFinder(globalSettings, nullptr, 0);
+        }
+      }
+      ifd::FileDialog::Instance().Close();
     }
-    ifd::FileDialog::Instance().Close();
   }
 
   ImGui::End();
@@ -61,4 +76,6 @@ void Settings::showSettingsWindow() {
     globalSettings.hysteresisMin = std::min(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
     globalSettings.hysteresisMax = std::max(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
   }
+
+  return candidateFinder;
 }
