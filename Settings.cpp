@@ -10,33 +10,33 @@ Settings& Settings::getInstance() {
 
 void Settings::showSettingsWindow() {
 
-  float oldHysteresisMin = hysteresisMin;
-  float oldHysteresisMax = hysteresisMax;
+  float oldHysteresisMin = globalSettings.hysteresisMin;
+  float oldHysteresisMax = globalSettings.hysteresisMax;
 
   ImGui::Begin("Settings");
 
   ImGui::Text("Width");
-  ImGui::InputInt("min##1", &widthMin);
-  ImGui::InputInt("max##1", &widthMax);
+  ImGui::InputInt("min##1", &globalSettings.widthMin);
+  ImGui::InputInt("max##1", &globalSettings.widthMax);
 
   ImGui::Text("Limit height");
   ImGui::SameLine();
-  ImGui::Checkbox("##limitHeight", &limitHeight);
-  if (limitHeight) {
+  ImGui::Checkbox("##limitHeight", &globalSettings.limitHeight);
+  if (globalSettings.limitHeight) {
     ImGui::Text("Height");
-    ImGui::InputInt("min##2", &heightMin);
-    ImGui::InputInt("max##2", &heightMax);
+    ImGui::InputInt("min##2", &globalSettings.heightMin);
+    ImGui::InputInt("max##2", &globalSettings.heightMax);
   }
 
   ImGui::Text("Bitdepth");
   static int current_bitdepthInt = 0;
   const char* bitDepthItems[] = { "8 bit", "16 bit", "24 bit", "32 bit"};
   ImGui::Combo("bitdepth", &current_bitdepthInt, bitDepthItems, IM_ARRAYSIZE(bitDepthItems));
-  bitDepth = static_cast<Bitdepth>(current_bitdepthInt);
+  globalSettings.bitDepth = static_cast<Bitdepth>(current_bitdepthInt);
 
   ImGui::Text("Absolute correlation hysteresis");
-  ImGui::SliderFloat("min##3", &hysteresisMin, 0.0f, 1.0f);
-  ImGui::SliderFloat("max##3", &hysteresisMax, 0.0f, 1.0f);
+  ImGui::SliderFloat("min##3", &globalSettings.hysteresisMin, 0.0f, 1.0f);
+  ImGui::SliderFloat("max##3", &globalSettings.hysteresisMax, 0.0f, 1.0f);
 
   if (ImGui::Button("Open file..."))
     ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
@@ -53,12 +53,12 @@ void Settings::showSettingsWindow() {
 
   // depending on which of the min/max values was changed, we want to adjust the other if needed
   // to satisfy the min <= max condition
-  if (oldHysteresisMin != hysteresisMin) {
-    hysteresisMax = std::max(hysteresisMin, hysteresisMax);
-    hysteresisMin = std::min(hysteresisMin, hysteresisMax);
+  if (oldHysteresisMin != globalSettings.hysteresisMin) {
+    globalSettings.hysteresisMax = std::max(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
+    globalSettings.hysteresisMin = std::min(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
   }
-  else if (oldHysteresisMax != hysteresisMax) {
-    hysteresisMin = std::min(hysteresisMin, hysteresisMax);
-    hysteresisMax = std::max(hysteresisMin, hysteresisMax);
+  else if (oldHysteresisMax != globalSettings.hysteresisMax) {
+    globalSettings.hysteresisMin = std::min(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
+    globalSettings.hysteresisMax = std::max(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
   }
 }
