@@ -40,28 +40,23 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
   ImGui::SliderFloat("min##3", &globalSettings.hysteresisMin, 0.0f, 1.0f);
   ImGui::SliderFloat("max##3", &globalSettings.hysteresisMax, 0.0f, 1.0f);
 
-  // a file can be opened to start analysis when no analysis is running at the moment
-  if ((candidateFinder == nullptr) || (candidateFinder->finderState == FinderState::ready)) {
-    if (ImGui::Button("Open file..."))
-      ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
+  // a file can be opened to start analysis, an already running analysis
+  // will be cancelled
+  if (ImGui::Button("Open file..."))
+    ifd::FileDialog::Instance().Open("FileOpenDialog", "Open file", ",.*");
 
-    if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
-      if (ifd::FileDialog::Instance().HasResult()) {
-        std::string res = ifd::FileDialog::Instance().GetResult().u8string();
+  if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
+    if (ifd::FileDialog::Instance().HasResult()) {
+      std::string res = ifd::FileDialog::Instance().GetResult().u8string();
 
-        if (candidateFinder != nullptr) {
-          if (candidateFinder->finderState == FinderState::ready) {
-            delete candidateFinder;
-            candidateFinder = nullptr;
-          }
-        }
-
-        if (candidateFinder == nullptr) {
-          candidateFinder = new CandidateFinder(globalSettings, nullptr, 0);
-        }
+      if (candidateFinder != nullptr) {
+        delete candidateFinder;
+        candidateFinder = nullptr;
       }
-      ifd::FileDialog::Instance().Close();
+
+      candidateFinder = new CandidateFinder(globalSettings, nullptr, 0);
     }
+    ifd::FileDialog::Instance().Close();
   }
 
   ImGui::End();
