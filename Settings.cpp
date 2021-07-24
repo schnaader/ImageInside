@@ -47,14 +47,27 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
 
   if (ifd::FileDialog::Instance().IsDone("FileOpenDialog")) {
     if (ifd::FileDialog::Instance().HasResult()) {
-      std::string res = ifd::FileDialog::Instance().GetResult().u8string();
+      auto selectedFile = ifd::FileDialog::Instance().GetResult();
 
-      if (candidateFinder != nullptr) {
-        delete candidateFinder;
-        candidateFinder = nullptr;
+      uint64_t filesize = std::filesystem::file_size(selectedFile);
+      unsigned char* data = (unsigned char*)malloc(filesize);
+      if (data != nullptr) {
+        FILE* f = fopen(selectedFile.u8string().c_str(), "rb");
+        unsigned char* dataptr = data;
+        size_t bytes_read;
+        do {
+          bytes_read = fread(dataptr, 1, 1024, f);
+          dataptr += bytes_read;
+        } while (bytes_read > 0);
+        fclose(f);
+
+        if (candidateFinder != nullptr) {
+          delete candidateFinder;
+          candidateFinder = nullptr;
+        }
+
+        candidateFinder = new CandidateFinder(globalSettings, data, filesize);
       }
-
-      candidateFinder = new CandidateFinder(globalSettings, nullptr, 0);
     }
     ifd::FileDialog::Instance().Close();
   }
