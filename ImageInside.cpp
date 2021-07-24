@@ -151,8 +151,12 @@ int main(int, char**)
         if (candidateFinder != nullptr) {
           if (candidateFinder->finderState == FinderState::analyzing) {
             ImGui::Begin("Progress", 0, ImGuiWindowFlags_NoResize);
-            ImGui::SetWindowSize(ImVec2(800, 75));
+            ImGui::SetWindowSize(ImVec2(800, 80));
             ImGui::ProgressBar(candidateFinder->analysisProgress);
+            if (ImGui::Button("Cancel")) {
+              delete candidateFinder;
+              candidateFinder = nullptr;
+            }
             ImGui::End();
           }
           else if (candidateFinder->finderState == FinderState::ready) {

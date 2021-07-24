@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 
-enum class FinderState { analyzing, ready };
+enum class FinderState { analyzing, ready, cancellationRequested, cancelled };
 
 class CandidateFinder {
   private:
@@ -16,6 +16,7 @@ class CandidateFinder {
   public:
     CandidateFinder(CandidateSettings settings, unsigned char* dataToAnalyze,
                     uint64_t dataLength);
+    ~CandidateFinder();
     FinderState finderState;
     std::mutex finderStateMutex;
     float analysisProgress;

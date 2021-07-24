@@ -11,6 +11,14 @@ void analyzeTask(float& analysisProgress, std::mutex& analysisProgressMutex,
       std::lock_guard<std::mutex> guard(analysisProgressMutex);
       analysisProgress = i / 500.0f;
     }
+
+    {
+      std::lock_guard<std::mutex> guard(finderStateMutex);
+      if (finderState == FinderState::cancellationRequested) {
+        finderState = FinderState::cancelled;
+        return;
+      }
+    }    
   }
 
   {
@@ -37,4 +45,11 @@ CandidateFinder::CandidateFinder(CandidateSettings settings, unsigned char* data
                             std::ref(analysisProgress), std::ref(analysisProgressMutex),
                             std::ref(finderState), std::ref(finderStateMutex));
   analyzeThread.detach();
+}
+
+CandidateFinder::~CandidateFinder() {
+  if (finderState == FinderState::analyzing) {
+    finderState = FinderState::cancellationRequested;
+    while (finderState == FinderState::cancellationRequested);
+  }
 }
