@@ -33,7 +33,7 @@ add_executable(ImageInside ImageInside.cpp Correlation.cpp)
 
 target_compile_features(ImageInside PUBLIC cxx_std_11)
 
-target_sources(ImageInside PRIVATE ImageInside.cpp)
+target_sources(ImageInside PRIVATE ImageInside.cpp Settings.cpp Settings.h Correlation.cpp Correlation.h)
 target_include_directories(ImageInside PUBLIC .)
 
 target_link_libraries (ImageInside PUBLIC IMGUI)

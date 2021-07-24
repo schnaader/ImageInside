@@ -1,3 +1,4 @@
+#include "Correlation.h"
 #include <cmath>
 #include <cfloat>
 
