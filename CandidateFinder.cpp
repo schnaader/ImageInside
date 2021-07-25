@@ -55,7 +55,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
           candidate.meanCorrelationCoefficient = correlationCoefficientSum / candidate.height;
           candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
 
-          if ((!settings.limitHeight) || ((candidate.height < settings.heightMax) && (candidate.height > settings.heightMin))) {
+          if ((!settings.limitHeight) || ((candidate.height <= settings.heightMax) && (candidate.height >= settings.heightMin))) {
             candidateFinder.candidates.push_back(candidate);
           }
         }
@@ -88,7 +88,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
       candidate.meanCorrelationCoefficient = correlationCoefficientSum / candidate.height;
       candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
 
-      if ((!settings.limitHeight) || ((candidate.height < settings.heightMax) && (candidate.height > settings.heightMin))) {
+      if ((!settings.limitHeight) || ((candidate.height <= settings.heightMax) && (candidate.height >= settings.heightMin))) {
         candidateFinder.candidates.push_back(candidate);
       }
     }
