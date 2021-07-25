@@ -2,7 +2,7 @@
 #include <cmath>
 #include <cfloat>
 
-// Computes the correlation coefficient of two rows of image data x and y with a length of y bytes.
+// Computes the correlation coefficient of two rows of image data "x" and "y" with a length of "length" bytes.
 // The correlation coefficient is defined as the result of dividing the empiric covariance by the empiric variance.
 
 double CorrelationCoefficient(unsigned char* x, unsigned char* y, int length) {
