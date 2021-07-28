@@ -12,9 +12,6 @@ Settings& Settings::getInstance() {
 CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFinder) {
   CandidateFinder* candidateFinder = globalCandidateFinder;
 
-  float oldHysteresisMin = globalSettings.hysteresisMin;
-  float oldHysteresisMax = globalSettings.hysteresisMax;
-
   ImGui::Begin("Settings");
 
   ImGui::Text("Width");
@@ -37,8 +34,9 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
   globalSettings.bitDepth = static_cast<Bitdepth>(current_bitdepthInt);
 
   ImGui::Text("Absolute correlation hysteresis");
-  ImGui::SliderFloat("min##3", &globalSettings.hysteresisMin, 0.0f, 1.0f);
-  ImGui::SliderFloat("max##3", &globalSettings.hysteresisMax, 0.0f, 1.0f);
+  bool hysteresisMinChanged = false, hysteresisMaxChanged = false;
+  hysteresisMinChanged = ImGui::SliderFloat("min##3", &globalSettings.hysteresisMin, 0.0f, 1.0f);
+  hysteresisMaxChanged = ImGui::SliderFloat("max##3", &globalSettings.hysteresisMax, 0.0f, 1.0f);
 
   // a file can be opened to start analysis, an already running analysis
   // will be cancelled
@@ -76,11 +74,11 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
 
   // depending on which of the min/max values was changed, we want to adjust the other if needed
   // to satisfy the min <= max condition
-  if (oldHysteresisMin != globalSettings.hysteresisMin) {
+  if (hysteresisMinChanged) {
     globalSettings.hysteresisMax = std::max(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
     globalSettings.hysteresisMin = std::min(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
   }
-  else if (oldHysteresisMax != globalSettings.hysteresisMax) {
+  else if (hysteresisMaxChanged) {
     globalSettings.hysteresisMin = std::min(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
     globalSettings.hysteresisMax = std::max(globalSettings.hysteresisMin, globalSettings.hysteresisMax);
   }
