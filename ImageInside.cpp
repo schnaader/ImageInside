@@ -250,7 +250,7 @@ int main(int, char**)
               
               {
                 std::lock_guard<std::mutex> candidatesGuard(candidateFinder->candidatesMutex);
-                for (auto candidate : candidateFinder->candidates) {
+                for (const auto& candidate : candidateFinder->candidates) {
                   cloned_candidates.insert(candidate);
                   i++;
                   if (i == 1000) break;
@@ -261,7 +261,7 @@ int main(int, char**)
               ImGui::Text("%d candidates, showing first %d", total_candidates, cloned_candidates.size());
               ImGui::Separator();
               i = 0;
-              for (auto candidate : cloned_candidates) {
+              for (const auto& candidate : cloned_candidates) {
                 ImGui::Text("Candidate #%d", i + 1);
                 ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
                 ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
@@ -316,7 +316,7 @@ int main(int, char**)
           ImGui::Separator();
           ImGui::Text("Line start correction offset");
           static int offsetCorrection = 0;
-          if (ImGui::SliderInt("pixels##LineStartCorrection", &offsetCorrection, 0, candidate.width - 1)) {
+          if (ImGui::SliderInt("pixels##LineStartCorrection", &offsetCorrection, 0, (int)candidate.width - 1)) {
             currentCandidateOffsetCorrection = offsetCorrection * candidate.bytePerPixel;
             currentCandidateReinitialize = true;
           }

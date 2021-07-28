@@ -1,11 +1,9 @@
 #include "Correlation.h"
-#include <cmath>
-#include <cfloat>
 
 // Computes the correlation coefficient of two rows of image data "x" and "y" with a length of "length" bytes.
 // The correlation coefficient is defined as the result of dividing the empiric covariance by the empiric variance.
 
-float CorrelationCoefficient(unsigned char* x, unsigned char* y, int length) {
+float CorrelationCoefficient(unsigned char* x, unsigned char* y, uint64_t length) {
 	// calculate means of x and y
 	float xSum = 0.0f;
 	float ySum = 0.0f;
