@@ -20,7 +20,7 @@ static CandidateFinder* candidateFinder = nullptr;
 static Candidate* currentCandidateImage = nullptr;
 static int64_t candidateImageOffset = -1;
 static int64_t candidateImagePixelCount = -1;
-static int candidateImageWidth, candidateImageHeight;
+static uint64_t candidateImageWidth, candidateImageHeight;
 static int currentCandidateImageNumber = -1;
 static D3D12_CPU_DESCRIPTOR_HANDLE texture_srv_cpu_handle;
 static D3D12_GPU_DESCRIPTOR_HANDLE texture_srv_gpu_handle;
@@ -98,7 +98,21 @@ void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData
     texture_srv_gpu_handle = g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
     texture_srv_gpu_handle.ptr += ((size_t)handle_increment * descriptor_index);
 
-    bool ret = LoadTextureFromImageData8Bpp(candidateFinderData + candidateImageOffset, candidateImageWidth, candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+    bool ret = false;
+    switch (candidate.bitDepth) {
+      case Bitdepth::bpp8:
+        ret = LoadTextureFromImageData8Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        break;
+      case Bitdepth::bpp16:
+        ret = LoadTextureFromImageData16Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        break;
+      case Bitdepth::bpp24:
+        ret = LoadTextureFromImageData24Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        break;
+      case Bitdepth::bpp32:
+        ret = LoadTextureFromImageData(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        break;
+    }
     IM_ASSERT(ret);
   }
 
@@ -242,7 +256,7 @@ int main(int, char**)
                 ImGui::Text("Size: %d x %d", candidate.width, candidate.height);
 
                 char buttonLabel[100];
-                sprintf(buttonLabel, "Show candidate##%d", i);
+                sprintf_s(buttonLabel, "Show candidate##%d", i);
                 if (ImGui::Button(buttonLabel)) {
                   currentCandidateImage = &Candidate(candidate);
                   currentCandidateImageNumber = i;

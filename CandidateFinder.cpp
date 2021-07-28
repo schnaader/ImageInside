@@ -2,22 +2,37 @@
 #include "Correlation.h"
 
 void analyzeTask(CandidateFinder& candidateFinder) {
+  int bytePerPixel = 1;
+  switch (candidateFinder.candidateSettings.bitDepth) {
+    case Bitdepth::bpp16:
+      bytePerPixel = 2;
+      break;
+    case Bitdepth::bpp24:
+      bytePerPixel = 3;
+      break;
+    case Bitdepth::bpp32:
+      bytePerPixel = 4;
+      break;
+  }
+
   // estimate progress max (how many pixels will be used to calculate the correlation coefficients)
   uint64_t progress_max = 0;
   auto settings = candidateFinder.candidateSettings;
 
-  for (int width = settings.widthMin; width <= settings.widthMax; width++) {
+  for (uint64_t width = settings.widthMin; width <= settings.widthMax; width++) {
     uint64_t bytes_to_process = candidateFinder.dataLength;
     if (settings.limitHeight) {
-      bytes_to_process = std::min(bytes_to_process, (uint64_t)width * settings.heightMax);
+      bytes_to_process = std::min(bytes_to_process, (uint64_t)width * bytePerPixel * settings.heightMax);
     }
-    progress_max += width * ((bytes_to_process - width) / width);
+    progress_max += width * ((bytes_to_process - width * bytePerPixel) / (width * bytePerPixel));
   }
 
   // calculate correlation coefficients for each width
   uint64_t progress = 0;
   unsigned char* dataptr;
   for (uint64_t width = settings.widthMin; width <= settings.widthMax; width++) {
+    uint64_t widthInBytes = width * bytePerPixel;
+
     auto correlationCoefficientsForWidth = std::vector<float>();
 
     uint64_t offset = 0;
@@ -31,14 +46,15 @@ void analyzeTask(CandidateFinder& candidateFinder) {
     bool processingCandidate = false;
     float correlationCoefficientSum;
 
-    while ((offset + 2 * width < candidateFinder.dataLength) && (height < maxHeight)) {
+    while ((offset + 2 * widthInBytes < candidateFinder.dataLength) && (height < maxHeight)) {
       dataptr = candidateFinder.dataToAnalyze + offset;
-      float correlationCoefficient = std::abs(CorrelationCoefficient(dataptr, dataptr + width, width));
+      float correlationCoefficient = std::abs(CorrelationCoefficient(dataptr, dataptr + widthInBytes, widthInBytes));
       correlationCoefficientsForWidth.push_back(correlationCoefficient);
 
       if (!processingCandidate) {
         if (correlationCoefficient > settings.hysteresisMax) {
           processingCandidate = true;
+          candidate.bitDepth = candidateFinder.candidateSettings.bitDepth;
           candidate.width = width;
           candidate.startOffset = offset;
           candidate.startLine = height;
@@ -62,7 +78,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
         }
       }
 
-      offset += width;
+      offset += widthInBytes;
       progress += width;
       height++;
 

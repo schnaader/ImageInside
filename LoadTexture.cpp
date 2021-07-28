@@ -42,6 +42,44 @@ bool LoadTextureFromImageData8Bpp(unsigned char* image_data, int image_width, in
   return result;
 }
 
+bool LoadTextureFromImageData16Bpp(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource) {
+  auto image_data_converted = new unsigned char[(uint64_t)image_width * image_height * 4];
+  // convert from 16 bpp to 32 bpp
+  // assume 5 bits for red and blue, 6 bits for green
+  for (int i = 0; i < image_width * image_height; i++) {
+    uint16_t imageData16Bpp = *(uint16_t*)(image_data + i);
+    uint8_t r = (((imageData16Bpp >> 11) & 0x1F) * 255) / 31;
+    uint8_t g = (((imageData16Bpp >> 5) & 0x3F) * 255) / 63;
+    uint8_t b = ((imageData16Bpp & 0x1F) * 255) / 31;
+
+    image_data_converted[i * 4 + 0] = r;
+    image_data_converted[i * 4 + 1] = g;
+    image_data_converted[i * 4 + 2] = b;
+    image_data_converted[i * 4 + 3] = 255;
+  }
+
+  bool result = LoadTextureFromImageData(image_data_converted, image_width, image_height, d3d_device, srv_cpu_handle, out_tex_resource);
+
+  delete[] image_data_converted;
+  return result;
+}
+
+bool LoadTextureFromImageData24Bpp(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource) {
+  auto image_data_converted = new unsigned char[(uint64_t)image_width * image_height * 4];
+  // convert from 24 bpp to 32 bpp
+  for (int i = 0; i < image_width * image_height; i++) {
+    image_data_converted[i * 4 + 0] = image_data[i * 3];
+    image_data_converted[i * 4 + 1] = image_data[i * 3 + 1];
+    image_data_converted[i * 4 + 2] = image_data[i * 3 + 2];
+    image_data_converted[i * 4 + 3] = 255;
+  }
+
+  bool result = LoadTextureFromImageData(image_data_converted, image_width, image_height, d3d_device, srv_cpu_handle, out_tex_resource);
+
+  delete[] image_data_converted;
+  return result;
+}
+
 bool LoadTextureFromImageData(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource) {
   // Create texture resource
   D3D12_HEAP_PROPERTIES props;
