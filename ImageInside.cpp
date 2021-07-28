@@ -10,11 +10,17 @@ static CandidateFinder* candidateFinder = nullptr;
 
 #include "imgui.h"
 #include "ImFileDialog/ImFileDialog.h"
+#include "LoadTexture.h"
 #include "backends/imgui_impl_win32.h"
 #include "backends/imgui_impl_dx12.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
+
+static bool isTestImageInitialized = false;
+static int test_image_width, test_image_height;
+static D3D12_CPU_DESCRIPTOR_HANDLE texture_srv_cpu_handle;
+static D3D12_GPU_DESCRIPTOR_HANDLE texture_srv_gpu_handle;
 
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
@@ -64,6 +70,43 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #ifdef _MSC_VER
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
+
+void ShowTestImage() {
+  if (!isTestImageInitialized) {
+    // We need to pass a D3D12_CPU_DESCRIPTOR_HANDLE in ImTextureID, so make sure it will fit
+    static_assert(sizeof(ImTextureID) >= sizeof(D3D12_CPU_DESCRIPTOR_HANDLE), "D3D12_CPU_DESCRIPTOR_HANDLE is too large to fit in an ImTextureID");
+
+    // We presume here that we have our D3D device pointer in g_pd3dDevice
+
+    test_image_width = 0;
+    test_image_height = 0;
+    ID3D12Resource* my_texture = NULL;
+
+    // Get CPU/GPU handles for the shader resource view
+    // Normally your engine will have some sort of allocator for these - here we assume that there's an SRV descriptor heap in
+    // g_pd3dSrvDescHeap with at least two descriptors allocated, and descriptor 1 is unused
+    UINT handle_increment = g_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    int descriptor_index = 1; // The descriptor table index to use (not normally a hard-coded constant, but in this case we'll assume we have slot 1 reserved for us)
+    texture_srv_cpu_handle = g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart();
+    texture_srv_cpu_handle.ptr += ((size_t)handle_increment * descriptor_index);
+    texture_srv_gpu_handle = g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
+    texture_srv_gpu_handle.ptr += ((size_t)handle_increment * descriptor_index);
+
+    // Load the texture from a file
+    bool ret = LoadTextureFromFile("..\\test.png", g_pd3dDevice, texture_srv_cpu_handle, &my_texture, &test_image_width, &test_image_height);
+    IM_ASSERT(ret);
+
+    isTestImageInitialized = true;
+  }
+
+  ImGui::Begin("DirectX12 Texture Test");
+  ImGui::Text("CPU handle = %p", texture_srv_cpu_handle.ptr);
+  ImGui::Text("GPU handle = %p", texture_srv_gpu_handle.ptr);
+  ImGui::Text("size = %d x %d", test_image_width, test_image_height);
+  // Note that we pass the GPU SRV handle here, *not* the CPU handle. We're passing the internal pointer value, cast to an ImTextureID
+  ImGui::Image((ImTextureID)texture_srv_gpu_handle.ptr, ImVec2((float)test_image_width, (float)test_image_height));
+  ImGui::End();
+}
 
 // Main code
 int main(int, char**)
@@ -163,6 +206,9 @@ int main(int, char**)
             // TODO: show candidate finder results
           }
         }
+
+        // Show test image
+        ShowTestImage();
 
         // Rendering
         ImGui::Render();
@@ -286,7 +332,7 @@ bool CreateDeviceD3D(HWND hWnd)
     {
         D3D12_DESCRIPTOR_HEAP_DESC desc = {};
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        desc.NumDescriptors = 1;
+        desc.NumDescriptors = 2;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         if (g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap)) != S_OK)
             return false;
@@ -354,7 +400,11 @@ void CleanupDeviceD3D()
     IDXGIDebug1* pDebug = NULL;
     if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDebug))))
     {
-        pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY);
+        // leads to a crash if an image is loaded and the window is closed
+        // but this is only for DX12 debugging and resources are released
+        // afterwards -> commented
+        // pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY);
+
         pDebug->Release();
     }
 #endif
