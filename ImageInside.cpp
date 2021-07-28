@@ -111,17 +111,17 @@ void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData
     texture_srv_gpu_handle.ptr += ((size_t)handle_increment * descriptor_index);
 
     bool ret = false;
-    switch (candidate.bitDepth) {
-      case Bitdepth::bpp8:
+    switch (candidate.bytePerPixel) {
+      case 1:
         ret = LoadTextureFromImageData8Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
-      case Bitdepth::bpp16:
+      case 2:
         ret = LoadTextureFromImageData16Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
-      case Bitdepth::bpp24:
+      case 3:
         ret = LoadTextureFromImageData24Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
-      case Bitdepth::bpp32:
+      case 4:
         ret = LoadTextureFromImageData(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
     }
@@ -266,8 +266,9 @@ int main(int, char**)
               ImGui::Separator();
               for (int i = 0; i < cloned_candidates.size(); i++) {
                 auto candidate = cloned_candidates[i];
+
                 ImGui::Text("Candidate #%d", i + 1);
-                ImGui::Text("Score: %f %%", candidate.score / candidateFinder->dataLength * 100.0f);
+                ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
                 ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
                 ImGui::Text("Size: %d x %d", candidate.width, candidate.height);
 
@@ -293,27 +294,14 @@ int main(int, char**)
           ImGui::Begin("Image candidate", 0, ImGuiWindowFlags_NoResize);
           ImGui::SetWindowSize(ImVec2(700, 700));
           ImGui::Text("Candidate #%d", currentCandidateImageNumber + 1);
-          ImGui::Text("Score: %f %%", candidate.score / candidateFinder->dataLength * 100.0f);
+          ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
           ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
           ImGui::Text("Size: %d x %d pixels", candidate.width, candidate.height);
 
-          int bytePerPixel = 1;
-          switch (candidate.bitDepth) {
-          case Bitdepth::bpp16:
-            bytePerPixel = 2;
-            break;
-          case Bitdepth::bpp24:
-            bytePerPixel = 3;
-            break;
-          case Bitdepth::bpp32:
-            bytePerPixel = 4;
-            break;
-          }
-
-          if (bytePerPixel > 1) {
+          if (candidate.bytePerPixel > 1) {
             ImGui::Separator();
             ImGui::Text("Color correction offset");
-            for (int i = 0; i < bytePerPixel; i++) {
+            for (int i = 0; i < candidate.bytePerPixel; i++) {
               char buttonLabel[100];
               sprintf_s(buttonLabel, "Offset by %d bytes", i);
               if (i > 0) {
@@ -332,7 +320,7 @@ int main(int, char**)
           ImGui::Text("Line start correction offset");
           static int offsetCorrection = 0;
           if (ImGui::SliderInt("pixels##LineStartCorrection", &offsetCorrection, 0, candidate.width - 1)) {
-            currentCandidateOffsetCorrection = offsetCorrection * bytePerPixel;
+            currentCandidateOffsetCorrection = offsetCorrection * candidate.bytePerPixel;
             currentCandidateReinitialize = true;
           }
           ImGui::Separator();

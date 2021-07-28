@@ -9,7 +9,7 @@ struct Candidate {
   uint64_t startLine;
   uint64_t endLine;
   uint64_t pixelCount;
-  Bitdepth bitDepth;
+  int bytePerPixel;
 
   float meanCorrelationCoefficient;
   float score;
