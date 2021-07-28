@@ -228,6 +228,7 @@ int main(int, char**)
         bool newFileWasOpened = false;
         candidateFinder = settings.showSettingsWindow(candidateFinder, newFileWasOpened);
         if (newFileWasOpened) {
+          delete currentCandidateImage;
           currentCandidateImage = nullptr;
         }
 
@@ -239,6 +240,7 @@ int main(int, char**)
             if (ImGui::Button("Cancel")) {
               delete candidateFinder;
               candidateFinder = nullptr;
+              delete currentCandidateImage;
               currentCandidateImage = nullptr;
             }
             ImGui::End();
@@ -273,7 +275,7 @@ int main(int, char**)
 
                 ImGui::PushID(i);
                 if (ImGui::Button("Show candidate")) {
-                  currentCandidateImage = &Candidate(candidate);
+                  currentCandidateImage = new Candidate(candidate);
                   currentCandidateImageNumber = i;
                   currentCandidateColorOffsetCorrection = 0;
                   currentCandidateOffsetCorrection = 0;

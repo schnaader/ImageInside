@@ -138,7 +138,15 @@ CandidateFinder::CandidateFinder(CandidateSettings settings, unsigned char* data
 CandidateFinder::~CandidateFinder() {
   if (finderState == FinderState::analyzing) {
     finderState = FinderState::cancellationRequested;
-    while (finderState == FinderState::cancellationRequested);
+    for (;;) {
+      {
+        std::lock_guard<std::mutex> finderGuard(finderStateMutex);
+        if (finderState != FinderState::cancellationRequested) {
+          break;
+        }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
   }
 
   free(dataToAnalyze);
