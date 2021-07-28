@@ -85,7 +85,8 @@ void analyzeTask(CandidateFinder& candidateFinder) {
           candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
 
           if ((!settings.limitHeight) || ((candidate.height <= settings.heightMax) && (candidate.height >= settings.heightMin))) {
-            candidateFinder.candidates.push_back(candidate);
+            std::lock_guard<std::mutex> candidatesGuard(candidateFinder.candidatesMutex);
+            candidateFinder.candidates.insert(candidate);
           }
         }
       }
@@ -118,18 +119,13 @@ void analyzeTask(CandidateFinder& candidateFinder) {
       candidate.score = candidate.pixelCount * candidate.meanCorrelationCoefficient;
 
       if ((!settings.limitHeight) || ((candidate.height <= settings.heightMax) && (candidate.height >= settings.heightMin))) {
-        candidateFinder.candidates.push_back(candidate);
+        std::lock_guard<std::mutex> candidatesGuard(candidateFinder.candidatesMutex);
+        candidateFinder.candidates.insert(candidate);
       }
     }
 
     candidateFinder.correlationCoefficientsForLines.push_back(correlationCoefficientsForWidth);
   }
-
-  // sort candidates descending by score
-  struct {
-    bool operator()(Candidate a, Candidate b) const { return a.score > b.score; }
-  } customSort;
-  std::sort(candidateFinder.candidates.begin(), candidateFinder.candidates.end(), customSort);
 
   std::lock_guard<std::mutex> progressGuard(candidateFinder.analysisProgressMutex);
   candidateFinder.analysisProgress = 1.0f;

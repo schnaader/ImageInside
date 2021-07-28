@@ -6,9 +6,14 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 enum class FinderState { analyzing, ready, cancellationRequested, cancelled };
+
+struct candidateSort final {
+  bool operator()(Candidate a, Candidate b) const { return a.score > b.score; }
+};
 
 class CandidateFinder {
   public:
@@ -25,5 +30,6 @@ class CandidateFinder {
     uint64_t dataLength;
 
     std::vector<std::vector<float>> correlationCoefficientsForLines;
-    std::vector<Candidate> candidates;
+    std::set<Candidate, candidateSort> candidates;
+    std::mutex candidatesMutex;
 };

@@ -235,6 +235,7 @@ int main(int, char**)
             if (ImGui::Button("Cancel")) {
               delete candidateFinder;
               candidateFinder = nullptr;
+              currentCandidateImage = nullptr;
             }
             ImGui::End();
           }
@@ -243,30 +244,24 @@ int main(int, char**)
             auto total_candidates = candidateFinder->candidates.size();
             // show candidate finder results (so far)
             if (total_candidates > 0) {
-              std::vector<Candidate> cloned_candidates;
-              if (total_candidates < 1000) {
-                cloned_candidates = std::vector<Candidate>(candidateFinder->candidates);
+              std::set<Candidate, candidateSort> cloned_candidates;
+              cloned_candidates = std::set<Candidate, candidateSort>();
+              int i = 0;
+              
+              {
+                std::lock_guard<std::mutex> candidatesGuard(candidateFinder->candidatesMutex);
+                for (auto candidate : candidateFinder->candidates) {
+                  cloned_candidates.insert(candidate);
+                  i++;
+                  if (i == 1000) break;
+                }
               }
-              else {
-                // limit to the first 1000 candidates
-                cloned_candidates = std::vector<Candidate>(
-                  candidateFinder->candidates.begin(),
-                  candidateFinder->candidates.begin() + 1000
-                  );
-              }
-
-              // sort candidates descending by score
-              struct {
-                bool operator()(Candidate a, Candidate b) const { return a.score > b.score; }
-              } customSort;
-              std::sort(cloned_candidates.begin(), cloned_candidates.end(), customSort);
 
               ImGui::Begin("Image candidates");
               ImGui::Text("%d candidates, showing first %d", total_candidates, cloned_candidates.size());
               ImGui::Separator();
-              for (int i = 0; i < cloned_candidates.size(); i++) {
-                auto candidate = cloned_candidates[i];
-
+              i = 0;
+              for (auto candidate : cloned_candidates) {
                 ImGui::Text("Candidate #%d", i + 1);
                 ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
                 ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
@@ -282,6 +277,8 @@ int main(int, char**)
                   currentCandidateReinitialize = true;
                 }
                 ImGui::Separator();
+
+                i++;
               }
               ImGui::End();
             }
@@ -292,7 +289,7 @@ int main(int, char**)
           auto candidate = *currentCandidateImage;
 
           ImGui::Begin("Image candidate", 0, ImGuiWindowFlags_NoResize);
-          ImGui::SetWindowSize(ImVec2(700, 700));
+          ImGui::SetWindowSize(ImVec2(700, 750));
           ImGui::Text("Candidate #%d", currentCandidateImageNumber + 1);
           ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
           ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
