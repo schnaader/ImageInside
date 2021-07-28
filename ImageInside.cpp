@@ -22,6 +22,7 @@ static int64_t candidateImageOffset = -1;
 static int64_t candidateImagePixelCount = -1;
 static uint64_t candidateImageWidth, candidateImageHeight;
 static int currentCandidateImageNumber = -1;
+static int currentCandidateColorOffsetCorrection = 0;
 static int currentCandidateOffsetCorrection = 0;
 static bool currentCandidateReinitialize = false;
 static D3D12_CPU_DESCRIPTOR_HANDLE texture_srv_cpu_handle;
@@ -87,8 +88,8 @@ void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData
     // change offset and height if changedOffset flag is set
     auto actualOffset = candidateImageOffset;
     auto actualHeight = candidateImageHeight;
-    if (currentCandidateOffsetCorrection > 0) {
-      actualOffset += currentCandidateOffsetCorrection;
+    if (currentCandidateColorOffsetCorrection + currentCandidateOffsetCorrection > 0) {
+      actualOffset += currentCandidateColorOffsetCorrection + currentCandidateOffsetCorrection;
       actualHeight--;
     }
     currentCandidateReinitialize = false;
@@ -128,7 +129,7 @@ void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData
   }
 
   auto actualHeight = candidateImageHeight;
-  if (currentCandidateOffsetCorrection > 0) {
+  if (currentCandidateColorOffsetCorrection + currentCandidateOffsetCorrection > 0) {
     actualHeight--;
   }
   // scale image, keep aspect ratio, set longest side to 512 pixels
@@ -275,6 +276,7 @@ int main(int, char**)
                 if (ImGui::Button(buttonLabel)) {
                   currentCandidateImage = &Candidate(candidate);
                   currentCandidateImageNumber = i;
+                  currentCandidateColorOffsetCorrection = 0;
                   currentCandidateOffsetCorrection = 0;
                   currentCandidateReinitialize = true;
                 }
@@ -295,20 +297,22 @@ int main(int, char**)
           ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
           ImGui::Text("Size: %d x %d pixels", candidate.width, candidate.height);
 
-          if (candidate.bitDepth != Bitdepth::bpp8) {
-            int bytePerPixel = 1;
-            switch (candidate.bitDepth) {
-            case Bitdepth::bpp16:
-              bytePerPixel = 2;
-              break;
-            case Bitdepth::bpp24:
-              bytePerPixel = 3;
-              break;
-            case Bitdepth::bpp32:
-              bytePerPixel = 4;
-              break;
-            }
+          int bytePerPixel = 1;
+          switch (candidate.bitDepth) {
+          case Bitdepth::bpp16:
+            bytePerPixel = 2;
+            break;
+          case Bitdepth::bpp24:
+            bytePerPixel = 3;
+            break;
+          case Bitdepth::bpp32:
+            bytePerPixel = 4;
+            break;
+          }
 
+          if (bytePerPixel > 1) {
+            ImGui::Separator();
+            ImGui::Text("Color correction offset");
             for (int i = 0; i < bytePerPixel; i++) {
               char buttonLabel[100];
               sprintf_s(buttonLabel, "Offset by %d bytes", i);
@@ -316,13 +320,22 @@ int main(int, char**)
                 ImGui::SameLine();
               }
               if (ImGui::Button(buttonLabel)) {
-                if (i != currentCandidateOffsetCorrection) {
+                if (i != currentCandidateColorOffsetCorrection) {
+                  currentCandidateColorOffsetCorrection = i;
                   currentCandidateReinitialize = true;
-                  currentCandidateOffsetCorrection = i;
                 }
               }
             }
           }
+
+          ImGui::Separator();
+          ImGui::Text("Line start correction offset");
+          static int offsetCorrection = 0;
+          if (ImGui::SliderInt("pixels##LineStartCorrection", &offsetCorrection, 0, candidate.width - 1)) {
+            currentCandidateOffsetCorrection = offsetCorrection * bytePerPixel;
+            currentCandidateReinitialize = true;
+          }
+          ImGui::Separator();
 
           ShowCandidateImage(candidate, candidateFinder->dataToAnalyze);
 
