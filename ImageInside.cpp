@@ -267,15 +267,15 @@ int main(int, char**)
                 ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
                 ImGui::Text("Size: %d x %d", candidate.width, candidate.height);
 
-                char buttonLabel[100];
-                sprintf_s(buttonLabel, "Show candidate##%d", i);
-                if (ImGui::Button(buttonLabel)) {
+                ImGui::PushID(i);
+                if (ImGui::Button("Show candidate")) {
                   currentCandidateImage = &Candidate(candidate);
                   currentCandidateImageNumber = i;
                   currentCandidateColorOffsetCorrection = 0;
                   currentCandidateOffsetCorrection = 0;
                   currentCandidateReinitialize = true;
                 }
+                ImGui::PopID();
                 ImGui::Separator();
 
                 i++;
