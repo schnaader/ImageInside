@@ -17,7 +17,7 @@ bool LoadTextureFromFile(const char* filename, ID3D12Device* d3d_device, D3D12_C
   if (image_data == NULL)
     return false;
 
-  if (LoadTextureFromImageData(image_data, image_width, image_height, d3d_device, srv_cpu_handle, out_tex_resource, out_width, out_height)) {
+  if (LoadTextureFromImageData(image_data, image_width, image_height, d3d_device, srv_cpu_handle, out_tex_resource)) {
     stbi_image_free(image_data);
 
     return true;
@@ -26,7 +26,23 @@ bool LoadTextureFromFile(const char* filename, ID3D12Device* d3d_device, D3D12_C
   return false;
 }
 
-bool LoadTextureFromImageData(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource, int* out_width, int* out_height) {
+bool LoadTextureFromImageData8Bpp(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource) {
+  auto image_data_converted = new unsigned char[(uint64_t)image_width * image_height * 4];
+  // convert from 8 bpp to 32 bpp
+  for (int i = 0; i < image_width * image_height; i++) {
+    image_data_converted[i * 4 + 0] = image_data[i];
+    image_data_converted[i * 4 + 1] = image_data[i];
+    image_data_converted[i * 4 + 2] = image_data[i];
+    image_data_converted[i * 4 + 3] = 255;
+  }
+
+  bool result = LoadTextureFromImageData(image_data_converted, image_width, image_height, d3d_device, srv_cpu_handle, out_tex_resource);
+
+  delete[] image_data_converted;
+  return result;
+}
+
+bool LoadTextureFromImageData(unsigned char* image_data, int image_width, int image_height, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource) {
   // Create texture resource
   D3D12_HEAP_PROPERTIES props;
   memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
@@ -168,8 +184,6 @@ bool LoadTextureFromImageData(unsigned char* image_data, int image_width, int im
 
   // Return results
   *out_tex_resource = pTexture;
-  *out_width = image_width;
-  *out_height = image_height;
 
   return true;
 }

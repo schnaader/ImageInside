@@ -17,8 +17,11 @@ static CandidateFinder* candidateFinder = nullptr;
 #include <dxgi1_4.h>
 #include <tchar.h>
 
-static bool isTestImageInitialized = false;
-static int test_image_width, test_image_height;
+static Candidate* currentCandidateImage = nullptr;
+static int64_t candidateImageOffset = -1;
+static int64_t candidateImagePixelCount = -1;
+static int candidateImageWidth, candidateImageHeight;
+static int currentCandidateImageNumber = -1;
 static D3D12_CPU_DESCRIPTOR_HANDLE texture_srv_cpu_handle;
 static D3D12_GPU_DESCRIPTOR_HANDLE texture_srv_gpu_handle;
 
@@ -71,15 +74,18 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-void ShowTestImage() {
-  if (!isTestImageInitialized) {
+void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData) {
+  // check if this candidate image has to be initialized (uploaded to GPU)
+  if ((candidate.startOffset != candidateImageOffset) || (candidate.pixelCount != candidateImagePixelCount)) {
+    candidateImageOffset = (int64_t)candidate.startOffset;
+    candidateImagePixelCount = (int64_t)candidate.pixelCount;
+    candidateImageWidth = candidate.width;
+    candidateImageHeight = candidate.height;
+
     // We need to pass a D3D12_CPU_DESCRIPTOR_HANDLE in ImTextureID, so make sure it will fit
     static_assert(sizeof(ImTextureID) >= sizeof(D3D12_CPU_DESCRIPTOR_HANDLE), "D3D12_CPU_DESCRIPTOR_HANDLE is too large to fit in an ImTextureID");
 
     // We presume here that we have our D3D device pointer in g_pd3dDevice
-
-    test_image_width = 0;
-    test_image_height = 0;
     ID3D12Resource* my_texture = NULL;
 
     // Get CPU/GPU handles for the shader resource view
@@ -92,20 +98,20 @@ void ShowTestImage() {
     texture_srv_gpu_handle = g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
     texture_srv_gpu_handle.ptr += ((size_t)handle_increment * descriptor_index);
 
-    // Load the texture from a file
-    bool ret = LoadTextureFromFile("..\\test.png", g_pd3dDevice, texture_srv_cpu_handle, &my_texture, &test_image_width, &test_image_height);
+    bool ret = LoadTextureFromImageData8Bpp(candidateFinderData + candidateImageOffset, candidateImageWidth, candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
     IM_ASSERT(ret);
-
-    isTestImageInitialized = true;
   }
 
-  ImGui::Begin("DirectX12 Texture Test");
-  ImGui::Text("CPU handle = %p", texture_srv_cpu_handle.ptr);
-  ImGui::Text("GPU handle = %p", texture_srv_gpu_handle.ptr);
-  ImGui::Text("size = %d x %d", test_image_width, test_image_height);
-  // Note that we pass the GPU SRV handle here, *not* the CPU handle. We're passing the internal pointer value, cast to an ImTextureID
-  ImGui::Image((ImTextureID)texture_srv_gpu_handle.ptr, ImVec2((float)test_image_width, (float)test_image_height));
-  ImGui::End();
+  // scale image, keep aspect ratio, set longest side to 512 pixels
+  float w = 512.0f;
+  float h = 512.0f;
+  if (candidateImageWidth >= candidateImageHeight) {
+    h = 512.0f * candidateImageHeight / candidateImageWidth;
+  }
+  else {
+    w = 512.0f * candidateImageWidth / candidateImageHeight;
+  }
+  ImGui::Image((ImTextureID)texture_srv_gpu_handle.ptr, ImVec2(w, h));
 }
 
 // Main code
@@ -202,13 +208,66 @@ int main(int, char**)
             }
             ImGui::End();
           }
-          else if (candidateFinder->finderState == FinderState::ready) {
-            // TODO: show candidate finder results
+
+          if (candidateFinder != nullptr) { // might be nullptr again because of "Cancel" button
+            auto total_candidates = candidateFinder->candidates.size();
+            // show candidate finder results (so far)
+            if (total_candidates > 0) {
+              std::vector<Candidate> cloned_candidates;
+              if (total_candidates < 1000) {
+                cloned_candidates = std::vector<Candidate>(candidateFinder->candidates);
+              }
+              else {
+                // limit to the first 1000 candidates
+                cloned_candidates = std::vector<Candidate>(
+                  candidateFinder->candidates.begin(),
+                  candidateFinder->candidates.begin() + 1000
+                  );
+              }
+
+              // sort candidates descending by score
+              struct {
+                bool operator()(Candidate a, Candidate b) const { return a.score > b.score; }
+              } customSort;
+              std::sort(cloned_candidates.begin(), cloned_candidates.end(), customSort);
+
+              ImGui::Begin("Image candidates");
+              ImGui::Text("%d candidates, showing first %d", total_candidates, cloned_candidates.size());
+              ImGui::Separator();
+              for (int i = 0; i < cloned_candidates.size(); i++) {
+                auto candidate = cloned_candidates[i];
+                ImGui::Text("Candidate #%d", i + 1);
+                ImGui::Text("Score: %f %%", candidate.score / candidateFinder->dataLength * 100.0f);
+                ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
+                ImGui::Text("Size: %d x %d", candidate.width, candidate.height);
+
+                char buttonLabel[100];
+                sprintf(buttonLabel, "Show candidate##%d", i);
+                if (ImGui::Button(buttonLabel)) {
+                  currentCandidateImage = &Candidate(candidate);
+                  currentCandidateImageNumber = i;
+                }
+                ImGui::Separator();
+              }
+              ImGui::End();
+            }
           }
         }
 
-        // Show test image
-        ShowTestImage();
+        if (currentCandidateImage != nullptr && candidateFinder != nullptr) {
+          auto candidate = *currentCandidateImage;
+
+          ImGui::Begin("Image candidate", 0, ImGuiWindowFlags_NoResize);
+          ImGui::SetWindowSize(ImVec2(700, 700));
+          ImGui::Text("Candidate #%d", currentCandidateImageNumber + 1);
+          ImGui::Text("Score: %f %%", candidate.score / candidateFinder->dataLength * 100.0f);
+          ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
+          ImGui::Text("Size: %d x %d pixels", candidate.width, candidate.height);
+
+          ShowCandidateImage(candidate, candidateFinder->dataToAnalyze);
+
+          ImGui::End();
+        }
 
         // Rendering
         ImGui::Render();

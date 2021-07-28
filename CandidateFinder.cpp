@@ -40,6 +40,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
         if (correlationCoefficient > settings.hysteresisMax) {
           processingCandidate = true;
           candidate.width = width;
+          candidate.startOffset = offset;
           candidate.startLine = height;
           correlationCoefficientSum = correlationCoefficient;
         }
