@@ -55,18 +55,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
         if (correlationCoefficient > settings.hysteresisMax) {
           processingCandidate = true;
 
-          candidate.bytePerPixel = 1;
-          switch (candidateFinder.candidateSettings.bitDepth) {
-            case Bitdepth::bpp16:
-              candidate.bytePerPixel = 2;
-              break;
-            case Bitdepth::bpp24:
-              candidate.bytePerPixel = 3;
-              break;
-            case Bitdepth::bpp32:
-              candidate.bytePerPixel = 4;
-              break;
-          }
+          candidate.bytePerPixel = bytePerPixel;
           candidate.width = width;
           candidate.startOffset = offset;
           candidate.startLine = height;
