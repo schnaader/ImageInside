@@ -9,7 +9,7 @@ Settings& Settings::getInstance() {
   return instance;
 }
 
-CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFinder) {
+CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFinder, bool& newFileWasOpened) {
   CandidateFinder* candidateFinder = globalCandidateFinder;
 
   ImGui::Begin("Settings");
@@ -65,6 +65,7 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
         }
 
         candidateFinder = new CandidateFinder(globalSettings, data, filesize);
+        newFileWasOpened = true;
       }
     }
     ifd::FileDialog::Instance().Close();

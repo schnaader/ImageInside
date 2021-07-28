@@ -15,5 +15,5 @@ class Settings
   public:
     CandidateSettings globalSettings;
 
-    CandidateFinder* showSettingsWindow(CandidateFinder* globalCandidateFinder);
+    CandidateFinder* showSettingsWindow(CandidateFinder* globalCandidateFinder, bool& newFileWasOpened);
 };

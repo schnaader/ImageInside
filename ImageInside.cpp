@@ -225,7 +225,11 @@ int main(int, char**)
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        candidateFinder = settings.showSettingsWindow(candidateFinder);
+        bool newFileWasOpened = false;
+        candidateFinder = settings.showSettingsWindow(candidateFinder, newFileWasOpened);
+        if (newFileWasOpened) {
+          currentCandidateImage = nullptr;
+        }
 
         if (candidateFinder != nullptr) {
           if (candidateFinder->finderState == FinderState::analyzing) {
