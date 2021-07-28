@@ -20,7 +20,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
   for (uint64_t width = settings.widthMin; width <= settings.widthMax; width++) {
     auto correlationCoefficientsForWidth = std::vector<float>();
 
-    uint64_t offset1 = 0;
+    uint64_t offset = 0;
     uint64_t height = 0;
     uint64_t maxHeight = UINT64_MAX;
     if (settings.limitHeight) {
@@ -31,8 +31,8 @@ void analyzeTask(CandidateFinder& candidateFinder) {
     bool processingCandidate = false;
     float correlationCoefficientSum;
 
-    while ((offset1 + 2 * width < candidateFinder.dataLength) && (height < maxHeight)) {
-      dataptr = candidateFinder.dataToAnalyze + offset1;
+    while ((offset + 2 * width < candidateFinder.dataLength) && (height < maxHeight)) {
+      dataptr = candidateFinder.dataToAnalyze + offset;
       float correlationCoefficient = std::abs(CorrelationCoefficient(dataptr, dataptr + width, width));
       correlationCoefficientsForWidth.push_back(correlationCoefficient);
 
@@ -61,7 +61,7 @@ void analyzeTask(CandidateFinder& candidateFinder) {
         }
       }
 
-      offset1 += width;
+      offset += width;
       progress += width;
       height++;
 
