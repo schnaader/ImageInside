@@ -22,6 +22,8 @@ static int64_t candidateImageOffset = -1;
 static int64_t candidateImagePixelCount = -1;
 static uint64_t candidateImageWidth, candidateImageHeight;
 static int currentCandidateImageNumber = -1;
+static int currentCandidateOffsetCorrection = 0;
+static bool currentCandidateReinitialize = false;
 static D3D12_CPU_DESCRIPTOR_HANDLE texture_srv_cpu_handle;
 static D3D12_GPU_DESCRIPTOR_HANDLE texture_srv_gpu_handle;
 
@@ -75,12 +77,21 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
 void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData) {
-  // check if this candidate image has to be initialized (uploaded to GPU)
-  if ((candidate.startOffset != candidateImageOffset) || (candidate.pixelCount != candidateImagePixelCount)) {
+  // check if this candidate image has to be (re-)initialized (uploaded to GPU)
+  if ((candidate.startOffset != candidateImageOffset) || (candidate.pixelCount != candidateImagePixelCount) || currentCandidateReinitialize) {
     candidateImageOffset = (int64_t)candidate.startOffset;
     candidateImagePixelCount = (int64_t)candidate.pixelCount;
     candidateImageWidth = candidate.width;
     candidateImageHeight = candidate.height;
+
+    // change offset and height if changedOffset flag is set
+    auto actualOffset = candidateImageOffset;
+    auto actualHeight = candidateImageHeight;
+    if (currentCandidateOffsetCorrection > 0) {
+      actualOffset += currentCandidateOffsetCorrection;
+      actualHeight--;
+    }
+    currentCandidateReinitialize = false;
 
     // We need to pass a D3D12_CPU_DESCRIPTOR_HANDLE in ImTextureID, so make sure it will fit
     static_assert(sizeof(ImTextureID) >= sizeof(D3D12_CPU_DESCRIPTOR_HANDLE), "D3D12_CPU_DESCRIPTOR_HANDLE is too large to fit in an ImTextureID");
@@ -101,29 +112,33 @@ void ShowCandidateImage(Candidate& candidate, unsigned char* candidateFinderData
     bool ret = false;
     switch (candidate.bitDepth) {
       case Bitdepth::bpp8:
-        ret = LoadTextureFromImageData8Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        ret = LoadTextureFromImageData8Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
       case Bitdepth::bpp16:
-        ret = LoadTextureFromImageData16Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        ret = LoadTextureFromImageData16Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
       case Bitdepth::bpp24:
-        ret = LoadTextureFromImageData24Bpp(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        ret = LoadTextureFromImageData24Bpp(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
       case Bitdepth::bpp32:
-        ret = LoadTextureFromImageData(candidateFinderData + candidateImageOffset, (int)candidateImageWidth, (int)candidateImageHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
+        ret = LoadTextureFromImageData(candidateFinderData + actualOffset, (int)candidateImageWidth, (int)actualHeight, g_pd3dDevice, texture_srv_cpu_handle, &my_texture);
         break;
     }
     IM_ASSERT(ret);
   }
 
+  auto actualHeight = candidateImageHeight;
+  if (currentCandidateOffsetCorrection > 0) {
+    actualHeight--;
+  }
   // scale image, keep aspect ratio, set longest side to 512 pixels
   float w = 512.0f;
   float h = 512.0f;
-  if (candidateImageWidth >= candidateImageHeight) {
-    h = 512.0f * candidateImageHeight / candidateImageWidth;
+  if (candidateImageWidth >= actualHeight) {
+    h = 512.0f * actualHeight / candidateImageWidth;
   }
   else {
-    w = 512.0f * candidateImageWidth / candidateImageHeight;
+    w = 512.0f * candidateImageWidth / actualHeight;
   }
   ImGui::Image((ImTextureID)texture_srv_gpu_handle.ptr, ImVec2(w, h));
 }
@@ -260,6 +275,8 @@ int main(int, char**)
                 if (ImGui::Button(buttonLabel)) {
                   currentCandidateImage = &Candidate(candidate);
                   currentCandidateImageNumber = i;
+                  currentCandidateOffsetCorrection = 0;
+                  currentCandidateReinitialize = true;
                 }
                 ImGui::Separator();
               }
@@ -277,6 +294,35 @@ int main(int, char**)
           ImGui::Text("Score: %f %%", candidate.score / candidateFinder->dataLength * 100.0f);
           ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
           ImGui::Text("Size: %d x %d pixels", candidate.width, candidate.height);
+
+          if (candidate.bitDepth != Bitdepth::bpp8) {
+            int bytePerPixel = 1;
+            switch (candidate.bitDepth) {
+            case Bitdepth::bpp16:
+              bytePerPixel = 2;
+              break;
+            case Bitdepth::bpp24:
+              bytePerPixel = 3;
+              break;
+            case Bitdepth::bpp32:
+              bytePerPixel = 4;
+              break;
+            }
+
+            for (int i = 0; i < bytePerPixel; i++) {
+              char buttonLabel[100];
+              sprintf_s(buttonLabel, "Offset by %d bytes", i);
+              if (i > 0) {
+                ImGui::SameLine();
+              }
+              if (ImGui::Button(buttonLabel)) {
+                if (i != currentCandidateOffsetCorrection) {
+                  currentCandidateReinitialize = true;
+                  currentCandidateOffsetCorrection = i;
+                }
+              }
+            }
+          }
 
           ShowCandidateImage(candidate, candidateFinder->dataToAnalyze);
 
