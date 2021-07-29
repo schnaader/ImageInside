@@ -272,6 +272,7 @@ int main(int, char**)
                 ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
                 ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
                 ImGui::Text("Size: %d x %d", candidate.width, candidate.height);
+                ImGui::Text("File offset: 0x%08Xh", candidate.startOffset);
 
                 ImGui::PushID(i);
                 if (ImGui::Button("Show candidate")) {
@@ -300,6 +301,7 @@ int main(int, char**)
           ImGui::Text("Score: %f %%", candidate.score * candidate.bytePerPixel / candidateFinder->dataLength * 100.0f);
           ImGui::Text("Mean absolute correlation coefficient: %f", candidate.meanCorrelationCoefficient);
           ImGui::Text("Size: %d x %d pixels", candidate.width, candidate.height);
+          ImGui::Text("File offset: 0x%08Xh", candidate.startOffset);
 
           if (candidate.bytePerPixel > 1) {
             ImGui::Separator();
