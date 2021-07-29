@@ -50,7 +50,7 @@ CandidateFinder* Settings::showSettingsWindow(CandidateFinder* globalCandidateFi
       uint64_t filesize = std::filesystem::file_size(selectedFile);
       unsigned char* data = (unsigned char*)malloc(filesize);
       if (data != nullptr) {
-        FILE* f = fopen(selectedFile.u8string().c_str(), "rb");
+        FILE* f = _wfopen(selectedFile.wstring().c_str(), L"rb");
         unsigned char* dataptr = data;
         size_t bytes_read;
         do {
