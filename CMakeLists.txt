@@ -10,7 +10,6 @@ option(IMGUI_IMPL_GLFW "Build the GLFW implementation (only if supported)" ON)
 set(IMGUI_DIR "imgui")
 add_library(IMGUI STATIC)
 
-
 if (IMGUI_IMPL_GLFW)
 	find_package(OpenGL REQUIRED)
 	
@@ -65,3 +64,13 @@ target_sources(ImageInside PRIVATE ImageInside.cpp Settings.cpp Settings.h Corre
 target_include_directories(ImageInside PUBLIC .)
 
 target_link_libraries (ImageInside PUBLIC IMGUI glfw)
+
+if (UNIX)
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package(OpenGL REQUIRED)
+	find_package(Threads REQUIRED)
+	find_package(glfw3 3.3 REQUIRED)
+	find_package(X11 REQUIRED)
+	# include_directories (${X11_INCLUDE_DIR})
+	target_link_libraries (ImageInside PUBLIC ${CMAKE_DL_LIBS} ${X11_LIBRARIES} Threads::Threads OpenGL::GL)
+endif()
