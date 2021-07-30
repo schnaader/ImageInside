@@ -8,7 +8,7 @@
 
 // Simple helper function to load an image into a DX12 texture with common settings
 // Returns true on success, with the SRV CPU handle having an SRV for the newly-created texture placed in it (srv_cpu_handle must be a handle in a valid descriptor heap)
-bool LoadTextureFromFile(const char* filename, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource, int* out_width, int* out_height)
+/*bool LoadTextureFromFile(const char* filename, ID3D12Device* d3d_device, D3D12_CPU_DESCRIPTOR_HANDLE srv_cpu_handle, ID3D12Resource** out_tex_resource, int* out_width, int* out_height)
 {
   // Load from disk into a raw RGBA buffer
   int image_width = 0;
@@ -224,4 +224,4 @@ bool LoadTextureFromImageData(unsigned char* image_data, int image_width, int im
   *out_tex_resource = pTexture;
 
   return true;
-}
+}*/
