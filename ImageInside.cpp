@@ -333,7 +333,7 @@ int main(int, char**)
             ImGui::Text("Color correction offset");
             for (int i = 0; i < candidate.bytePerPixel; i++) {
               char buttonLabel[100];
-              sprintf_s(buttonLabel, "Offset by %d bytes", i);
+              sprintf(buttonLabel, "Offset by %d bytes", i);
               if (i > 0) {
                 ImGui::SameLine();
               }
